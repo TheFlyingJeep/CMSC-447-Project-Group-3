@@ -1,0 +1,27 @@
+<?php
+
+error_log("Ran shortcode");
+if (!isset($_POST["username"]) || !isset($_POST["password"])) {
+    //header("Location: ../login-page-test", true);
+    exit();
+} else {
+    $username = $_POST["username"];
+    $password = $_POST["password"];
+
+    if (empty($username) || empty($password)) {
+        //header("Location: ../login-page-test", true);
+        exit();
+    }
+
+    $password_file = fopen(PLUGIN_TEMPLATE_PLUGIN_DIR . "/admin/user_password.ini", "r") or die("Password file does not exist");
+    $password_hash = fgets($password_file);
+    fclose($password_file);
+    if (!$username == "test" || !password_verify($password, $password_hash)) {
+        //header("Location: ../login-page-test", true);
+        exit();
+    }
+}
+
+?>
+
+<h1>Welcome to the protected page!</h1>

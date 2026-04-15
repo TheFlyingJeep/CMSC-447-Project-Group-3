@@ -1,0 +1,24 @@
+/**
+ * All of the CSS for your admin-specific functionality should be
+ * included in this file.
+ */
+
+
+.plugin-template-page{
+    display:flex;
+    background-color: rgb(226, 164, 216);
+    min-height: 300px;
+    margin: 20px 20px 20px 20px;
+    padding: 10px 10px 10px 10px;
+}
+
+.plugin-template-page-title{
+    display:flex;
+    font-size: 32px;
+    color: #000;
+}
+
+.ts-field-container{
+    display: flex;
+    padding: 10px 10px 10px 10px;
+}
