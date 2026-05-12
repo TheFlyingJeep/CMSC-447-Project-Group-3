@@ -1,0 +1,404 @@
+<?php
+require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'public/classes/asc_util/asc_utilities.php';
+use Plugin_Template\Public\Asc_Util;
+	if (session_status() != PHP_SESSION_ACTIVE) {
+		session_start();
+	}
+	if (!isset($_SESSION["id"])) {
+		session_destroy();
+		wp_safe_redirect(home_url("/login-page/"));
+		exit;
+	}
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        Asc_Util\asc_save_tutor_session();
+    }
+	$selected_subject = isset($_GET['asc_subject']) ? sanitize_text_field(wp_unslash($_GET['asc_subject'])) : '';
+	$selected_course = isset($_GET['asc_course']) ? sanitize_text_field(wp_unslash($_GET['asc_course'])) : '';
+	$selected_tutor = isset($_GET['asc_tutor']) ? sanitize_text_field(wp_unslash($_GET['asc_tutor'])) : '';
+	$selected_days = isset($_GET['asc_day']) ? (array) wp_unslash($_GET['asc_day']) : array();
+	$selected_days = array_values(array_unique(array_filter(array_map('sanitize_text_field', $selected_days))));
+
+	$all_rows = Asc_Util\asc_get_all_session_rows();
+	list($subjects, $courses_by_subject, $tutors) = Asc_Util\asc_get_filter_options_from_rows($all_rows);
+
+	$filtered_rows = Asc_Util\asc_filter_session_rows($all_rows, array(
+		'subject' => $selected_subject,
+		'course'  => $selected_course,
+		'tutor'   => $selected_tutor,
+		'days'    => $selected_days,
+	));
+
+	$grouped = Asc_Util\asc_group_session_rows($filtered_rows);
+
+	?>
+    <link rel="stylesheet" href="<?php echo PLUGIN_TEMPLATE_PLUGIN_URL . "public/css/admin_dynamic.css" ?>">
+	<section id="asc-admin-view">
+		<div class="asc-admin-panel">
+			<div class="asc-admin-header-row">
+				<h1>Drop-In Tutoring</h1>
+			</div>
+
+			<h2>Admin Control Center</h2>
+
+			<?php if (isset($_GET['asc_updated']) && $_GET['asc_updated'] === '1') : ?>
+				<div class="asc-notice-success">Tutor session updated successfully. Linked shift cards were synced too.</div>
+			<?php endif; ?>
+
+			<div class="asc-filter-shell">
+				<form method="get" class="asc-filter-bar">
+					<label>
+						<span>Subject</span>
+						<select class="asc-filter-select asc-subject-select" name="asc_subject">
+							<option value="">All Subjects</option>
+							<?php foreach ($subjects as $subject_code) : ?>
+								<option value="<?php echo esc_attr($subject_code); ?>" <?php selected($selected_subject, $subject_code); ?>>
+									<?php echo esc_html($subject_code); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+
+					<label>
+						<span>Course</span>
+						<select class="asc-filter-select asc-course-select" name="asc_course">
+							<option value="">All Courses</option>
+							<?php foreach ($courses_by_subject as $subject_code => $courses) : ?>
+								<?php foreach ($courses as $course_code => $course_title) : ?>
+									<option
+										value="<?php echo esc_attr($course_code); ?>"
+										data-subject="<?php echo esc_attr($subject_code); ?>"
+										<?php selected($selected_course, $course_code); ?>
+									>
+										<?php echo esc_html($course_code . ' – ' . $course_title); ?>
+									</option>
+								<?php endforeach; ?>
+							<?php endforeach; ?>
+						</select>
+					</label>
+
+					<label>
+						<span>Tutor</span>
+						<select class="asc-filter-select" name="asc_tutor">
+							<option value="">All Tutors</option>
+							<?php foreach ($tutors as $tutor) : ?>
+								<option value="<?php echo esc_attr($tutor); ?>" <?php selected($selected_tutor, $tutor); ?>>
+									<?php echo esc_html($tutor); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+
+					<div class="asc-toolbar-button-wrap">
+						<button type="submit" class="asc-gold-btn">Filter</button>
+						<a class="asc-gold-btn asc-secondary-btn" href="<?php echo esc_url(get_permalink()); ?>">Clear</a>
+					</div>
+
+					<div class="asc-day-filter-wrap">
+						<span class="asc-filter-label">Days</span>
+						<div class="asc-day-filter-list">
+							<?php foreach (array('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday') as $day_option) : ?>
+								<label class="asc-day-check">
+									<input
+										type="checkbox"
+										name="asc_day[]"
+										value="<?php echo esc_attr($day_option); ?>"
+										<?php checked(in_array($day_option, $selected_days, true)); ?>
+									>
+									<span><?php echo esc_html($day_option); ?></span>
+								</label>
+							<?php endforeach; ?>
+						</div>
+					</div>
+				</form>
+			</div>
+
+			<?php
+			$active_filters = array_filter(array_merge(
+				array($selected_subject, $selected_course, $selected_tutor),
+				$selected_days
+			));
+			?>
+
+			<?php if (!empty($active_filters)) : ?>
+				<p class="asc-filter-summary">
+					Showing filtered tutor sessions
+					<?php if ($selected_subject) : ?> for subject <strong><?php echo esc_html($selected_subject); ?></strong><?php endif; ?>
+					<?php if ($selected_course) : ?> in course <strong><?php echo esc_html($selected_course); ?></strong><?php endif; ?>
+					<?php if ($selected_tutor) : ?> with tutor <strong><?php echo esc_html($selected_tutor); ?></strong><?php endif; ?>
+					<?php if (!empty($selected_days)) : ?> on <strong><?php echo esc_html(implode(', ', $selected_days)); ?></strong><?php endif; ?>.
+				</p>
+			<?php endif; ?>
+
+			<?php if (!empty($grouped)) : ?>
+				<div class="asc-accordion-stack">
+					<?php foreach ($grouped as $subject_code => $subject_group) : ?>
+						<?php $subject_open = ($selected_subject === $subject_code) || (count($grouped) === 1); ?>
+						<details class="asc-subject-accordion" <?php echo $subject_open ? 'open' : ''; ?>>
+							<summary>
+								<span class="asc-summary-title"><?php echo esc_html($subject_code); ?></span>
+								<span class="asc-summary-meta"><?php echo esc_html((string) count($subject_group['courses'])); ?> course<?php echo count($subject_group['courses']) === 1 ? '' : 's'; ?></span>
+							</summary>
+
+							<div class="asc-accordion-body">
+								<div class="asc-course-inner-stack">
+									<?php foreach ($subject_group['courses'] as $course_key => $course_group) : ?>
+										<?php $course_open = ($selected_course === $course_group['course_code']) || (count($subject_group['courses']) === 1 && $subject_open); ?>
+										<details class="asc-course-accordion" <?php echo $course_open ? 'open' : ''; ?>>
+											<summary>
+												<span class="asc-summary-title"><?php echo esc_html($course_group['course_label']); ?></span>
+												<span class="asc-summary-meta"><?php echo esc_html((string) count($course_group['sessions'])); ?> tutor card<?php echo count($course_group['sessions']) === 1 ? '' : 's'; ?></span>
+											</summary>
+
+											<div class="asc-accordion-body">
+												<div class="asc-session-list-wrap">
+													<?php foreach ($course_group['sessions'] as $row) : ?>
+														<?php
+														$status_badge = Asc_Util\asc_get_status_display_text($row['status'], $row['left_early_time']);
+
+														$status_class = 'asc-pill-gray';
+														if ($row['status'] === 'Checked In') {
+															$status_class = 'asc-pill-green';
+														} elseif ($row['status'] === 'Cancelled') {
+															$status_class = 'asc-pill-red';
+														} elseif ($row['status'] === 'Left Early') {
+															$status_class = 'asc-pill-gold';
+														}
+
+														$capacity_class = ($row['capacity'] === 'Full') ? 'asc-capacity-full' : 'asc-capacity-normal';
+
+														$time_display = $row['day_display'] !== ''
+															? $row['day_display'] . ' — ' . $row['start_time'] . ' - ' . $row['end_time']
+															: $row['start_time'] . ' - ' . $row['end_time'];
+														?>
+														<form class="asc-session-card" method="post" action="">
+
+															<input type="hidden" name="post_id" value="<?php echo esc_attr($row['post_id']); ?>">
+															<?php wp_nonce_field('asc_save_tutor_session_' . $row['post_id']); ?>
+
+															<div class="asc-session-header">
+																<h3><?php echo esc_html($row['course_label']); ?></h3>
+																<p><strong>Tutor:</strong> <?php echo esc_html($row['tutor_name']); ?></p>
+																<?php if (!empty($row['shared_shift_id'])) : ?>
+																	<p><strong>Shared Shift ID:</strong> <?php echo esc_html($row['shared_shift_id']); ?></p>
+																<?php endif; ?>
+																<p><strong>Time:</strong> <?php echo esc_html($time_display); ?></p>
+
+																<p>
+																	<strong>Current Status:</strong>
+																	<span class="asc-status-badge asc-pill <?php echo esc_attr($status_class); ?>">
+																		<?php echo esc_html($status_badge); ?>
+																	</span>
+																</p>
+																<p>
+																	<strong>Current Capacity:</strong>
+																	<span class="asc-capacity-badge asc-pill <?php echo esc_attr($capacity_class); ?>">
+																		<?php echo esc_html($row['capacity']); ?>
+																	</span>
+																</p>
+															</div>
+
+															<div class="asc-control-group">
+																<h4>Status</h4>
+																<div class="asc-button-row" data-role="status">
+																	<button type="button" class="asc-gold-btn asc-toggle-btn <?php echo ($row['status'] === 'Not Checked In') ? 'is-active' : ''; ?>" data-value="Not Checked In">Not Checked In</button>
+																	<button type="button" class="asc-gold-btn asc-toggle-btn <?php echo ($row['status'] === 'Checked In') ? 'is-active' : ''; ?>" data-value="Checked In">Checked In</button>
+																	<button type="button" class="asc-gold-btn asc-toggle-btn <?php echo ($row['status'] === 'Cancelled') ? 'is-active' : ''; ?>" data-value="Cancelled">Cancelled</button>
+																	<button type="button" class="asc-gold-btn asc-toggle-btn <?php echo ($row['status'] === 'Left Early') ? 'is-active' : ''; ?>" data-value="Left Early">Left/Leaves Early</button>
+																</div>
+
+																<div class="asc-left-early-wrap" <?php echo ($row['status'] === 'Left Early') ? '' : 'hidden'; ?>>
+																	<label>
+																		<span>Left/Leaves Early at:</span>
+																		<input type="time" class="asc-left-early-time" name="left_early_time" value="<?php echo esc_attr($row['left_early_time']); ?>">
+																	</label>
+																</div>
+															</div>
+
+															<div class="asc-control-group">
+																<h4>Capacity</h4>
+																<div class="asc-button-row" data-role="capacity">
+																	<button type="button" class="asc-gold-btn asc-toggle-btn <?php echo ($row['capacity'] === 'Normal') ? 'is-active' : ''; ?>" data-value="Normal">Normal</button>
+																	<button type="button" class="asc-gold-btn asc-toggle-btn <?php echo ($row['capacity'] === 'Full') ? 'is-active' : ''; ?>" data-value="Full">Full</button>
+																</div>
+
+																<div class="asc-capacity-fields" style="grid-template-columns: 1fr;">
+																	<label>
+																		<span>Notes:</span>
+																		<input type="text" name="notes" value="<?php echo esc_attr($row['notes']); ?>" class="asc-capacity-note" placeholder="Optional note for staff">
+																	</label>
+																</div>
+															</div>
+
+															<div class="asc-control-group">
+																<h4>Quick Actions</h4>
+																<div class="asc-button-row">
+																	<button type="submit" class="asc-gold-btn asc-save-btn">Apply Update</button>
+																	<button type="button" class="asc-gold-btn asc-reset-btn">Reset</button>
+																</div>
+															</div>
+
+															<input type="hidden" class="asc-status-input" name="status" value="<?php echo esc_attr($row['status']); ?>">
+															<input type="hidden" class="asc-capacity-input" name="capacity" value="<?php echo esc_attr($row['capacity']); ?>">
+														</form>
+													<?php endforeach; ?>
+												</div>
+											</div>
+										</details>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						</details>
+					<?php endforeach; ?>
+				</div>
+			<?php else : ?>
+				<div class="asc-empty-state">
+					No tutor sessions match the selected filters.
+				</div>
+			<?php endif; ?>
+		</div>
+	</section>
+
+
+	<?php
+	Asc_Util\asc_render_shared_accordion_styles();
+	Asc_Util\asc_render_subject_course_filter_js();
+	?>
+	<script>
+	(function () {
+		function getVisualStatusText(value, timeValue) {
+			if (value === "Left Early") {
+				return timeValue ? "Left/Leaves Early at " + timeValue : "Left/Leaves Early";
+			}
+			return value;
+		}
+
+		document.querySelectorAll(".asc-session-card").forEach(function(card) {
+			const statusButtons = card.querySelectorAll('[data-role="status"] .asc-toggle-btn');
+			const capacityButtons = card.querySelectorAll('[data-role="capacity"] .asc-toggle-btn');
+			const statusBadge = card.querySelector(".asc-status-badge");
+			const capacityBadge = card.querySelector(".asc-capacity-badge");
+			const statusInput = card.querySelector(".asc-status-input");
+			const capacityInput = card.querySelector(".asc-capacity-input");
+			const leftEarlyWrap = card.querySelector(".asc-left-early-wrap");
+			const leftEarlyTime = card.querySelector(".asc-left-early-time");
+			const resetButton = card.querySelector(".asc-reset-btn");
+			const capacityNote = card.querySelector(".asc-capacity-note");
+
+			const initialStatus = statusInput ? statusInput.value : "Not Checked In";
+			const initialCapacity = capacityInput ? capacityInput.value : "Normal";
+			const initialNote = capacityNote ? capacityNote.value : "";
+			const initialLeftEarlyTime = leftEarlyTime ? leftEarlyTime.value : "";
+
+			function setActive(buttons, clickedButton) {
+				buttons.forEach(function(btn) {
+					btn.classList.remove("is-active");
+				});
+				if (clickedButton) {
+					clickedButton.classList.add("is-active");
+				}
+			}
+
+			function findButtonByValue(buttons, value) {
+				return Array.from(buttons).find(function(btn) {
+					return btn.dataset.value === value;
+				});
+			}
+
+			function updateStatusUI(value) {
+				statusInput.value = value;
+
+				statusBadge.classList.remove(
+					"asc-pill-green",
+					"asc-pill-red",
+					"asc-pill-gray",
+					"asc-pill-gold"
+				);
+
+				if (value === "Checked In") {
+					statusBadge.classList.add("asc-pill-green");
+				} else if (value === "Cancelled") {
+					statusBadge.classList.add("asc-pill-red");
+				} else if (value === "Left Early") {
+					statusBadge.classList.add("asc-pill-gold");
+				} else {
+					statusBadge.classList.add("asc-pill-gray");
+				}
+
+				if (value === "Left Early") {
+					leftEarlyWrap.hidden = false;
+					statusBadge.textContent = getVisualStatusText(value, leftEarlyTime?.value || "");
+				} else {
+					leftEarlyWrap.hidden = true;
+					if (leftEarlyTime) {
+						leftEarlyTime.value = "";
+					}
+					statusBadge.textContent = value;
+				}
+			}
+
+			function updateCapacityUI(value) {
+				capacityInput.value = value;
+
+				capacityBadge.classList.remove(
+					"asc-capacity-normal",
+					"asc-capacity-full"
+				);
+
+				if (value === "Full") {
+					capacityBadge.classList.add("asc-capacity-full");
+				} else {
+					capacityBadge.classList.add("asc-capacity-normal");
+				}
+
+				capacityBadge.textContent = value;
+			}
+
+			statusButtons.forEach(function(button) {
+				button.addEventListener("click", function() {
+					setActive(statusButtons, button);
+					updateStatusUI(button.dataset.value);
+				});
+			});
+
+			capacityButtons.forEach(function(button) {
+				button.addEventListener("click", function() {
+					setActive(capacityButtons, button);
+					updateCapacityUI(button.dataset.value);
+				});
+			});
+
+			if (leftEarlyTime) {
+				leftEarlyTime.addEventListener("input", function() {
+					if (statusInput && statusInput.value === "Left Early" && statusBadge) {
+						statusBadge.textContent = getVisualStatusText("Left Early", leftEarlyTime.value);
+					}
+				});
+			}
+
+			resetButton.addEventListener("click", function() {
+				const statusDefault = findButtonByValue(statusButtons, initialStatus);
+				const capacityDefault = findButtonByValue(capacityButtons, initialCapacity);
+
+				setActive(statusButtons, statusDefault);
+				setActive(capacityButtons, capacityDefault);
+
+				if (capacityNote) {
+					capacityNote.value = initialNote;
+				}
+				if (leftEarlyTime) {
+					leftEarlyTime.value = initialLeftEarlyTime;
+				}
+
+				updateStatusUI(initialStatus);
+				updateCapacityUI(initialCapacity);
+
+				if (statusBadge) {
+					statusBadge.textContent = getVisualStatusText(initialStatus, initialLeftEarlyTime);
+				}
+			});
+		});
+	})();
+	</script>
+	<?php
+
+    ?>

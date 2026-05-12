@@ -22,5 +22,5 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-$data = new Includes\Database\Data();
-//$data->db_uninstall();
+$cpt = new Includes\CPT_Sessions();
+$cpt->remove_cpt_sessions();

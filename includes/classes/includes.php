@@ -47,9 +47,6 @@ class Plugin_Template {
 		/* The class responsible for defining all actions that occur in the public-facing side of the site. */
 		require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'public/classes/public.php';
 
-		/* The class responsible for database access. */
-		//require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'includes/classes/database/data.php';
-
 		/* The class responsible for the custom objects. */
 		require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'includes/classes/objects/tutor-session-objects.php';
 
@@ -57,7 +54,7 @@ class Plugin_Template {
 		require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'includes/classes/custom/tutor-session-post.php';
 
 		/* The class responsible for the custom CPT and ACF. */
-		require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'includes/classes/cpt/cpt_acf.php';
+		//require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'includes/classes/cpt/cpt_acf.php';
 
 		/* The class responsible for shared functions. */
 		require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'includes/classes/utility/utilities.php';
@@ -90,7 +87,7 @@ class Plugin_Template {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
 		$admin_menu = new Admin\AdminMenu();
-		$this->loader->add_action( 'admin_menu', $admin_menu, 'register_menus', 9 );
+		$this->loader->add_action( 'admin_menu', $admin_menu, 'register_csv_page', 9 );
 
 		$capabilities = new Access\Capabilities();
 		$this->loader->add_action( 'admin_init', $capabilities, 'get_caps', 10, 4);

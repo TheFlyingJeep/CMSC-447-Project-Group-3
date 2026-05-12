@@ -1,0 +1,203 @@
+<?php
+require_once PLUGIN_TEMPLATE_PLUGIN_DIR . 'public/classes/asc_util/asc_utilities.php';
+use Plugin_Template\Public\Asc_Util;
+
+if (session_status() != PHP_SESSION_ACTIVE) {
+		session_start();
+	}
+	if (isset($_SESSION["id"])) {
+		unset($_SESSION["id"]);
+	}
+	session_destroy();
+
+	$selected_subject = isset($_GET['asc_subject']) ? sanitize_text_field(wp_unslash($_GET['asc_subject'])) : '';
+	$selected_course  = isset($_GET['asc_course']) ? sanitize_text_field(wp_unslash($_GET['asc_course'])) : '';
+
+	$today_day     = wp_date('l', null, wp_timezone());
+	$today_enabled = isset($_GET['asc_today']) && sanitize_text_field(wp_unslash($_GET['asc_today'])) === '1';
+	$selected_days = $today_enabled ? array($today_day) : array();
+
+	$all_rows = Asc_Util\asc_get_all_session_rows();
+	list($subjects, $courses_by_subject) = Asc_Util\asc_get_filter_options_from_rows($all_rows);
+
+	$filtered_rows = Asc_Util\asc_filter_session_rows($all_rows, array(
+		'subject' => $selected_subject,
+		'course'  => $selected_course,
+		'tutor'   => '',
+		'days'    => $selected_days,
+	));
+
+	$grouped = Asc_Util\asc_group_session_rows($filtered_rows);
+
+	$latest_timestamp = 0;
+	foreach ($filtered_rows as $row) {
+		if (!empty($row['last_updated_unix']) && $row['last_updated_unix'] > $latest_timestamp) {
+			$latest_timestamp = $row['last_updated_unix'];
+		} elseif (!empty($row['last_updated'])) {
+			$ts = strtotime($row['last_updated']);
+			if ($ts && $ts > $latest_timestamp) {
+				$latest_timestamp = $ts;
+			}
+		}
+	}
+
+	$admin_url = '';
+	$admin_page = get_page_by_path('tutor-status-admin');
+	if ($admin_page) {
+		$admin_url = get_permalink($admin_page);
+	}
+
+	?>
+	<link rel="stylesheet" href="<?php echo PLUGIN_TEMPLATE_PLUGIN_URL . "public/css/front_dynamic.css" ?>">
+	<section id="asc-public-view">
+		<div class="asc-public-panel">
+			<div class="asc-public-header-row">
+				<h1>Drop-In Tutoring</h1>
+
+			</div>
+
+			<?php if ($latest_timestamp) : ?>
+				<p class="asc-last-updated"><strong>Last Updated:</strong> <?php echo esc_html(wp_date('F j, Y \a\t g:i a', $latest_timestamp, wp_timezone())); ?></p>
+			<?php endif; ?>
+
+			<div class="asc-filter-shell">
+				<form method="get" class="asc-filter-bar asc-filter-bar-public">
+					<label>
+						<span>Subject</span>
+						<select class="asc-filter-select asc-subject-select" name="asc_subject">
+							<option value="">All Subjects</option>
+							<?php foreach ($subjects as $subject_code) : ?>
+								<option value="<?php echo esc_attr($subject_code); ?>" <?php selected($selected_subject, $subject_code); ?>>
+									<?php echo esc_html($subject_code); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+
+					<label>
+						<span>Course</span>
+						<select class="asc-filter-select asc-course-select" name="asc_course">
+							<option value="">All Courses</option>
+							<?php foreach ($courses_by_subject as $subject_code => $courses) : ?>
+								<?php foreach ($courses as $course_code => $course_title) : ?>
+									<option
+										value="<?php echo esc_attr($course_code); ?>"
+										data-subject="<?php echo esc_attr($subject_code); ?>"
+										<?php selected($selected_course, $course_code); ?>
+									>
+										<?php echo esc_html($course_code . ' – ' . $course_title); ?>
+									</option>
+								<?php endforeach; ?>
+							<?php endforeach; ?>
+						</select>
+					</label>
+
+					<label class="asc-today-toggle">
+						<span class="asc-filter-label">Quick Filter</span>
+						<span class="asc-today-box <?php echo $today_enabled ? 'is-active' : ''; ?>">
+							<input
+								type="checkbox"
+								class="asc-today-input"
+								name="asc_today"
+								value="1"
+								<?php checked($today_enabled); ?>
+							>
+							<span class="asc-today-copy">
+								<strong>Available Today</strong>
+								<small><?php echo esc_html($today_day); ?> only</small>
+							</span>
+						</span>
+					</label>
+
+					<div class="asc-toolbar-button-wrap">
+						<button type="submit" class="asc-gold-btn">Filter</button>
+						<a class="asc-gold-btn asc-secondary-btn" href="<?php echo esc_url(get_permalink()); ?>">Clear</a>
+					</div>
+				</form>
+			</div>
+
+			<?php if ($selected_subject || $selected_course || $today_enabled) : ?>
+				<p class="asc-filter-summary">
+					Showing tutoring sessions
+					<?php if ($selected_subject) : ?> for subject <strong><?php echo esc_html($selected_subject); ?></strong><?php endif; ?>
+					<?php if ($selected_course) : ?> in course <strong><?php echo esc_html($selected_course); ?></strong><?php endif; ?>
+					<?php if ($today_enabled) : ?> available <strong>today (<?php echo esc_html($today_day); ?>)</strong><?php endif; ?>.
+				</p>
+			<?php endif; ?>
+
+			<?php if (!empty($grouped)) : ?>
+				<div class="asc-accordion-stack">
+					<?php foreach ($grouped as $subject_code => $subject_group) : ?>
+						<?php $subject_open = ($selected_subject === $subject_code) || (count($grouped) === 1); ?>
+						<details class="asc-subject-accordion" <?php echo $subject_open ? 'open' : ''; ?>>
+							<summary>
+								<span class="asc-summary-title"><?php echo esc_html($subject_code); ?></span>
+								<span class="asc-summary-meta"><?php echo esc_html((string) count($subject_group['courses'])); ?> course<?php echo count($subject_group['courses']) === 1 ? '' : 's'; ?></span>
+							</summary>
+
+							<div class="asc-accordion-body">
+								<div class="asc-course-inner-stack">
+									<?php foreach ($subject_group['courses'] as $course_key => $course_group) : ?>
+										<?php $course_open = ($selected_course === $course_group['course_code']) || (count($subject_group['courses']) === 1 && $subject_open); ?>
+										<details class="asc-course-accordion" <?php echo $course_open ? 'open' : ''; ?>>
+											<summary>
+												<span class="asc-summary-title"><?php echo esc_html($course_group['course_label']); ?></span>
+												<span class="asc-summary-meta"><?php echo esc_html((string) count($course_group['sessions'])); ?> tutor option<?php echo count($course_group['sessions']) === 1 ? '' : 's'; ?></span>
+											</summary>
+
+											<div class="asc-accordion-body">
+												<div class="asc-course-inner-stack">
+													<?php foreach ($course_group['sessions'] as $row) : ?>
+														<?php
+														$status_text = Asc_Util\asc_get_status_display_text($row['status'], $row['left_early_time']);
+
+														$status_class = 'asc-pill-gray';
+														if ($row['status'] === 'Checked In') {
+															$status_class = 'asc-pill-green';
+														} elseif ($row['status'] === 'Cancelled') {
+															$status_class = 'asc-pill-red';
+														} elseif ($row['status'] === 'Left Early') {
+															$status_class = 'asc-pill-gold';
+														}
+
+														$capacity_class = ($row['capacity'] === 'Full') ? 'asc-capacity-full' : 'asc-capacity-normal';
+
+														$time_display = $row['day_display'] !== ''
+															? $row['day_display'] . ' — ' . $row['start_time'] . ' – ' . $row['end_time'] . ' – ' . $row['tutor_name']
+															: $row['start_time'] . ' – ' . $row['end_time'] . ' – ' . $row['tutor_name'];
+														?>
+														<article class="asc-student-card">
+															<div class="asc-student-card-top">
+																<div class="asc-session-time">
+																	<?php echo esc_html($time_display); ?>
+																</div>
+
+																<div class="asc-card-pills">
+																	<span class="asc-pill <?php echo esc_attr($status_class); ?>"><?php echo esc_html($status_text); ?></span>
+																	<span class="asc-pill <?php echo esc_attr($capacity_class); ?>"><?php echo esc_html($row['capacity']); ?></span>
+																</div>
+															</div>
+
+															<?php if (!empty($row['notes'])) : ?>
+																<div class="asc-note-line">
+																	<strong>Notes:</strong> <?php echo esc_html($row['notes']); ?>
+																</div>
+															<?php endif; ?>
+														</article>
+													<?php endforeach; ?>
+												</div>
+											</div>
+										</details>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						</details>
+					<?php endforeach; ?>
+				</div>
+			<?php else : ?>
+				<div class="asc-empty-state">
+					No tutoring sessions match the selected filters.
+				</div>
+			<?php endif; ?>
+		</div>
+	</section>

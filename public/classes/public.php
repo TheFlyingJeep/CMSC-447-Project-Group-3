@@ -39,7 +39,11 @@ class My_Public {
 
 
 	public function enqueue_styles() {
-		wp_enqueue_style( $this->plugin_name, PLUGIN_TEMPLATE_PLUGIN_URL . 'public/css/public.css', array(), $this->utilities->unique_id(), 'all' );
+		wp_enqueue_style( $this->plugin_name, PLUGIN_TEMPLATE_PLUGIN_URL . 'public/css/front.css', array(), $this->utilities->unique_id(), 'all' );
+		wp_enqueue_style( $this->plugin_name, PLUGIN_TEMPLATE_PLUGIN_URL . 'public/css/front_dynamic.css', array(), $this->utilities->unique_id(), 'all' );
+		wp_enqueue_style( $this->plugin_name, PLUGIN_TEMPLATE_PLUGIN_URL . 'public/css/login.css', array(), $this->utilities->unique_id(), 'all' );
+		wp_enqueue_style( $this->plugin_name, PLUGIN_TEMPLATE_PLUGIN_URL . 'public/css/admin.css', array(), $this->utilities->unique_id(), 'all' );
+		wp_enqueue_style( $this->plugin_name, PLUGIN_TEMPLATE_PLUGIN_URL . 'public/css/admin_dynamic.css', array(), $this->utilities->unique_id(), 'all' );
 	}
 
 	public function enqueue_scripts() {
