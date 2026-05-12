@@ -1,118 +1,84 @@
 #asc-admin-view {
-    padding: 8px 0 28px;
+padding: 8px 0 28px;
 }
 
 .asc-admin-panel {
-    max-width: 1100px;
-    margin: 0 auto;
+max-width: 1100px;
+margin: 0 auto;
 }
 
 .asc-admin-header-row h1 {
-    margin: 0;
-    font-size: 3rem;
-    line-height: 1.05;
-    font-weight: 900;
-    letter-spacing: -0.02em;
+margin: 0;
+font-size: 3rem;
+line-height: 1.05;
+font-weight: 900;
+letter-spacing: -0.02em;
 }
 
 #asc-admin-view h2 {
-    margin: 24px 0 28px;
-    font-size: 2.1rem;
-    line-height: 1.15;
-    font-weight: 900;
+margin: 24px 0 28px;
+font-size: 2.1rem;
+line-height: 1.15;
+font-weight: 900;
 }
 
 .asc-session-card {
-    background:
-        linear-gradient(135deg, rgba(255,255,255,0.96), rgba(247,247,247,0.96)),
-        radial-gradient(circle at top right, rgba(242,179,26,0.05), transparent 42%);
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 18px;
-    padding: 22px 22px 20px;
-    box-shadow:
-        0 12px 24px rgba(15, 23, 42, 0.08),
-        0 3px 8px rgba(15, 23, 42, 0.04);
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.asc-session-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        115deg,
-        transparent 15%,
-        rgba(255,255,255,0.18) 35%,
-        transparent 55%
-    );
-    background-size: 220% 100%;
-    animation: ascSweep 14s linear infinite;
-    pointer-events: none;
-}
-
-.asc-session-card:hover {
-    transform: translateY(-6px) scale(1.01);
-    box-shadow:
-        0 20px 36px rgba(15, 23, 42, 0.12),
-        0 6px 18px rgba(242,179,26,0.10);
+background: #ffffff;
+border: 1px solid #d1d5db;
+border-radius: 14px;
+padding: 22px 22px 20px;
+box-shadow: none;
 }
 
 .asc-session-header {
-    margin-bottom: 18px;
-    position: relative;
-    z-index: 1;
+margin-bottom: 18px;
 }
 
 .asc-session-header h3 {
-    margin: 0 0 12px;
-    font-size: 1.45rem;
-    line-height: 1.15;
-    font-weight: 900;
+margin: 0 0 12px;
+font-size: 1.45rem;
+line-height: 1.15;
+font-weight: 900;
 }
 
 .asc-session-header p {
-    margin: 0 0 12px;
-    font-size: 1.05rem;
+margin: 0 0 12px;
+font-size: 1.05rem;
 }
 
 .asc-control-group {
-    margin-bottom: 24px;
-    position: relative;
-    z-index: 1;
+margin-bottom: 24px;
 }
 
 .asc-control-group h4 {
-    margin: 0 0 12px;
-    font-size: 1.25rem;
-    font-weight: 900;
+margin: 0 0 12px;
+font-size: 1.25rem;
+font-weight: 900;
 }
 
 .asc-button-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+display: flex;
+flex-wrap: wrap;
+gap: 10px;
 }
 
 .asc-toggle-btn.is-active {
-    outline: 2px solid #111827;
-    outline-offset: -2px;
-    transform: translateY(-1px);
-    box-shadow: 0 14px 24px rgba(242,179,26,.22), 0 0 0 4px rgba(242,179,26,.14);
+outline: 2px solid #111827;
+outline-offset: -2px;
+background: #f2b31a;
 }
 
 .asc-left-early-wrap {
-    margin-top: 12px;
-    max-width: 280px;
+margin-top: 12px;
+max-width: 280px;
 }
 
 @media (max-width: 800px) {
     .asc-admin-header-row h1 {
-        font-size: 2.3rem;
+    font-size: 2.3rem;
     }
-
+    
     #asc-admin-view h2 {
-        font-size: 1.7rem;
+    font-size: 1.7rem;
     }
 }
